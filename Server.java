@@ -1,103 +1,112 @@
 import java.io.*;
 import java.net.*;
-class Server
-{
-	//class variables
-	private Socket statergy1;
-	private int statergy1_score;
-	private Socket statergy2;
-	private int statergy2_score;
-    private ServerSocket server;
 
-	int port;
-	int totalrounds;
+class Server {
+    private Socket strategy1Socket;
+    private int strategy1Score;
+    private Socket strategy2Socket;
+    private int strategy2Score;
+    private ServerSocket serverSocket;
 
-	//class constructors
+    private int port;
+    private int totalRounds;
 
-	Server(int port,int totalrounds)
-	{
-		this.port = port;
-		this.totalrounds = totalrounds;
-	}
-	Server()
-	{
-		port = 5000;
-		totalrounds = 200;
-	}
+    Server(int port, int totalRounds) {
+        this.port = port;
+        this.totalRounds = totalRounds;
+    }
 
-	//class fuctions
+    Server() {
+        this(5000, 200);
+    }
 
-	void startServer()
-	{
-		try
-		{
-			server = new ServerSocket(port);
-			statergy1 = server.accept();
-			statergy2 = server.accept();
-		}
-		catch(IOException i)
-		{
-			System.out.println(i + "Could not connect...\nExiting...");
-			System.exit(0);
-		}
-	}
+    void startServer() {
+        try {
+            serverSocket = new ServerSocket(port);
+            System.out.println("Server started on port " + port);
+            strategy1Socket = serverSocket.accept();
+            System.out.println("Strategy 1 connected");
+            strategy2Socket = serverSocket.accept();
+            System.out.println("Strategy 2 connected");
+        } catch (IOException e) {
+            System.out.println(e + " Could not connect...\nExiting...");
+            System.exit(0);
+        }
+    }
 
-	void calculateScore(String m1 ,String m2)
-	{	
-		if(m1=="c" && m2 == "d")
-			statergy2_score += 5;
-		else if(m1=="d" && m2 == "c")
-			statergy1_score += 5;
-		else if(m1=="c" && m2 == "c")
-		{
-			statergy1_score += 3;
-			statergy2_score += 3;
-		}
-		else
-		{
-			statergy1_score += 1;
-			statergy2_score += 1;
-		}
-	}
+    void calculateScore(String strategy1Move, String strategy2Move) {
+        if (strategy1Move.equals("c") && strategy2Move.equals("d")) {
+            strategy2Score += 5;
+        } else if (strategy1Move.equals("d") && strategy2Move.equals("c")) {
+            strategy1Score += 5;
+        } else if (strategy1Move.equals("c") && strategy2Move.equals("c")) {
+            strategy1Score += 3;
+            strategy2Score += 3;
+        } else if (strategy1Move.equals("d") && strategy2Move.equals("d")) {
+            strategy1Score += 1;
+            strategy2Score += 1;
+        }
+    }
 
-	void startGamePlay()
-	{
-		Messenger s1 = new Messenger(statergy1);
-		Messenger s2 = new Messenger(statergy2);
+    void startGamePlay() {
+        Messenger strategy1Messenger = new Messenger(strategy1Socket);
+        Messenger strategy2Messenger = new Messenger(strategy2Socket);
 
-		while(totalrounds>=0)
-		{
-			String m1 = s1.getMessage();
-			String m2 = s2.getMessage();
+        strategy1Messenger.sendMessage(Integer.toString(totalRounds));
+        strategy2Messenger.sendMessage(Integer.toString(totalRounds));
 
-			calculateScore(m1,m2);
+        while (totalRounds > 0) {
+            String strategy1Move = strategy1Messenger.getMessage();
+            String strategy2Move = strategy2Messenger.getMessage();
 
-			s1.sendMessage(m2);
-			s2.sendMessage(m1);
+            System.out.println("Strategy 1: " + strategy1Move);
+            System.out.println("Strategy 2: " + strategy2Move + "\n");
 
-			totalrounds--;
-		}
-	}
+            calculateScore(strategy1Move, strategy2Move);
+
+            strategy1Messenger.sendMessage(strategy2Move);
+            strategy2Messenger.sendMessage(strategy1Move);
+
+            totalRounds--;
+        }
+
+        System.out.println("Final Scores:");
+        System.out.println("Strategy 1: " + strategy1Score);
+        System.out.println("Strategy 2: " + strategy2Score);
+    }
+
+    public static void main(String[] args) {
+        Server server = new Server();
+        server.startServer();
+        server.startGamePlay();
+    }
 }
-class Messenger extends Thread
-{
-	private Socket statergy;
-	private String message;
-	Messenger(Socket statergy)
-	{
-		this.statergy = statergy;
-	}
-	String getMessage()
-	{
-		run();
-		return message;
-	}
-	void sendMessage(String message)
-	{
 
-	}
-	public void run()
-	{
-		message = ;
-	}
+class Messenger extends Thread {
+    private Socket strategySocket;
+    private BufferedReader inputReader;
+    private PrintWriter outputWriter;
+
+    Messenger(Socket strategySocket) {
+        this.strategySocket = strategySocket;
+        try {
+            inputReader = new BufferedReader(new InputStreamReader(strategySocket.getInputStream()));
+            outputWriter = new PrintWriter(strategySocket.getOutputStream(), true);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    String getMessage() {
+        try {
+            return inputReader.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    void sendMessage(String message) {
+        outputWriter.println(message);
+    }
 }
